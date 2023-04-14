@@ -1,0 +1,79 @@
+extends ./layout
+block contenido
+
+    div
+        h1.text-center.text-2xl.font-bold VISOR DE REPORTES MICROSIP - IR SOLUCIONES
+    div(class="grid place-items-center mt-16")
+        table(class="shadow-lg bg-white border-separate")
+            tr
+                th(class="bg-blue-100 border text-left px-8 py-4") #
+                th(class="bg-blue-100 border text-left px-8 py-4") Nombre del reporte
+                th(class="bg-blue-100 border text-left px-8 py-4") Opciones
+            tr
+                td(class="border px-8 py-4") 1
+                td(class="border px-8 py-4") Existencia de Articulos (Lotes vs Kardex)
+                td(class="border px-8 py-4 flex items-start justify-between") 
+                    button(id="b1" class="first bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full") Descargar
+
+    script.
+
+        const b1 = document.getElementById('b1'); 
+        b1.addEventListener('click', async function onClick(event){
+            event.preventDefault();
+            const { value: formValues } = await Swal.fire({
+            title: 'Ingrese los parametros del reporte',
+            html:
+                `<label for="swal-input1">fecha:</label>
+                 <input id="swal-input1" class="swal2-input" value="01/01/2018">
+                 <label for="swal-input1">Almacen:</label>
+                 <input id="swal-input2" class="swal2-input">
+                `,
+            focusConfirm: false,
+            preConfirm: () => {
+                return [
+                document.getElementById('swal-input1').value,
+                document.getElementById('swal-input2').value,
+                ]
+            }
+            });
+            
+            if(formValues){
+                if(formValues[0] === "" || formValues[1] === ""){
+                    return;
+                }
+                const regexFecha = /^(0?[1-9]|[12][0-9]|3[01])[\/\-](0?[1-9]|1[012])[\/\-]\d{4}$/;
+                const regexAlmacen = /^([a-zA-Z0-9\sÁÉÍÓÚáéíóúÑñ]+)$/;
+                
+                if(regexFecha.test(formValues[0]) && regexAlmacen.test(formValues[1])){
+                    
+                    await fetch('http://26.211.56.105:3000/reportesMicrosip', {
+                        method: 'POST',
+                        headers: {
+                        'responseType': 'blob',
+                        'Content-Type':'application/json',
+                        },
+                         body: JSON.stringify(formValues),
+                    }).then((response) => {
+                        return response.blob();
+                    }).then((data) => {
+                        const url = window.URL.createObjectURL(data);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        // the filename you want
+                        a.download = 'excelnode.xlsx';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    }).catch(err => {
+                        console.log(err);
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        text: 'La fecha o el almacen estan incorrectos',
+                    })
+                }
+            }
+        });
